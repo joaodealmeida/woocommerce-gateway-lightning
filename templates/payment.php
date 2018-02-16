@@ -1,14 +1,14 @@
 <link rel="stylesheet" href="<?php echo plugins_url('css/payment.css', dirname(__FILE__))?>" type="text/css">
 <noscript><style>.yesscript{display:none}</style></noscript>
 <?php 
-$expiry_datestr = time() + $callResponse['expiry'];
+$expiry_datestr = $callResponse->timestamp + $callResponse->expiry;
 ?>
 
 <div class="ln-pay">
   <h1>Pay with Lightning</h1>
   <h3>
     <?php if ($order->get_currency() !== 'BTC'): ?> <?php echo $order->get_total() ?> <?php echo $order->get_currency() ?> = <?php endif ?>
-    <?php echo self::format_msat($callResponse['num_satoshis']) ?>
+    <?php echo self::format_msat($callResponse->num_satoshis) ?>
   </h3>
   <img class="qr" src="<?php echo $qr_uri ?>">
   <code class="payreq"><?php echo $payReq ?></code>

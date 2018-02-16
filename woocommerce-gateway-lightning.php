@@ -20,8 +20,8 @@ register_activation_hook( __FILE__, function(){
   }
 });
 
-require_once 'vendor/autoload.php';
 require_once 'utilities.php';
+require_once 'Lnd_wrapper.php';
 
 define('LIGHTNING_LONGPOLL_TIMEOUT', min(120, max(5, ini_get('max_execution_time') * 0.8)));
 
@@ -37,7 +37,7 @@ if (!function_exists('init_wc_lightning')) {
         $this->order_button_text  = __('Proceed to Lightning Payment', 'woocommerce');
         $this->method_title       = __('Lightning', 'woocommerce');
         $this->method_description = __('Lightning Network Payment');
-        //$this->icon               = plugin_dir_url(__FILE__).'assets/img/icon.png';
+        $this->icon               = plugin_dir_url(__FILE__).'img/logo.png';
         $this->supports           = array();       
 
         // Load the settings.
@@ -49,6 +49,8 @@ if (!function_exists('init_wc_lightning')) {
         $this->description = $this->get_option('description');
         $this->endpoint = $this->get_option( 'endpoint' );
         $this->macaroon = $this->get_option( 'macaroon' );
+        $this->lndCon = LndWrapper::instance();
+        $this->lndCon->setCredentials ( $this->get_option( 'endpoint' ), $this->get_option( 'macaroon' ));        
 
         add_action('woocommerce_payment_gateways', array($this, 'register_gateway'));
         add_action('woocommerce_update_options_payment_gateways_lightning', array($this, 'process_admin_options'));
@@ -114,15 +116,14 @@ if (!function_exists('init_wc_lightning')) {
 
         $invoiceInfo = array();
         $btcPrice = $order->get_total() * ((float)1/ $livePrice);
-        $header = array('Grpc-Metadata-macaroon: ' . $this->macaroon , 'Content-type: application/json');
         
         $invoiceInfo['value'] = round($btcPrice * 100000000);
         $invoiceInfo['memo'] = "Order key: " . $order->get_checkout_order_received_url();
-        $invoiceResponse = curlWrap($this->endpoint . '/v1/invoices', json_encode($invoiceInfo), 'POST', $header);
-        $invoiceResponse = json_decode($invoiceResponse, true);    
 
-        update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse['payment_request'], true);
-        $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " BTC @ 1 BTC ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse['payment_request']);
+        $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
+
+        update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request, true);
+        $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " BTC @ 1 BTC ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);
 
         return array(
           'result'   => 'success',
@@ -149,25 +150,24 @@ if (!function_exists('init_wc_lightning')) {
          */
 
         $payReq = get_post_meta( $_POST['invoice_id'], 'LN_INVOICE', true );
-        $header = array('Grpc-Metadata-macaroon: ' . $this->macaroon , 'Content-type: application/json');
-        $callResponse = json_decode( curlWrap($this->endpoint . '/v1/payreq/' . $payReq,'', "GET", $header), true );
 
-        if(!isset($callResponse['payment_hash']) ) {
+        $callResponse = $this->lndCon->getInvoiceInfoFromPayReq( $payReq );
+        if(!property_exists( $callResponse, 'payment_hash' )) {
           status_header(410);
           wp_send_json(false);
           return;
         }
         
-        $invoiceRep = json_decode( curlWrap($this->endpoint . '/v1/invoice/' . $callResponse['payment_hash'],'', "GET", $header), true );
-        if(!isset($invoiceRep['settled'])){
+        $invoiceRep = $this->lndCon->getInvoiceInfoFromHash( $callResponse->payment_hash );        
+        if(!property_exists( $invoiceRep, 'settled' )){
           status_header(402);
           wp_send_json(false);
           return;
         }
         
-        if ($invoiceRep['settled']) {
+        if ($invoiceRep->settled) {
           $order->payment_complete();
-          $order->add_order_note('Zap Payment has been received.');
+          $order->add_order_note('Lightning Payment received on ' . $invoiceRep->settle_date);
           status_header(200);
           wp_send_json(true);
           return;
@@ -189,24 +189,19 @@ if (!function_exists('init_wc_lightning')) {
           exit;
         }
 
-        //Check if it's not paid
-        //if ($order->has_status == 'unpaid') {
-          //$invoice = $this->charge->fetch($invoice->id);
-          //$this->update_invoice($order, $invoice);
-        //}
-
         if ($order->has_status('cancelled')) {
           // invoice expired, reload page to display expiry message
           wp_redirect($order->get_checkout_payment_url(true));
           exit;
         }
-        $header = array('Grpc-Metadata-macaroon: ' . $this->macaroon , 'Content-type: application/json');
-        if ($order->needs_payment()) {
-          $qr_uri = self::get_qr_uri( get_post_meta( $order_id, 'LN_INVOICE', true ) );
 
+        if ($order->needs_payment()) {
+          //Prepare information for payment page
+          $qr_uri = $this->lndCon->generateQr( get_post_meta( $order_id, 'LN_INVOICE', true ) );
           $payReq = get_post_meta( $order->get_id(), 'LN_INVOICE', true );
-          $callResponse = json_decode( curlWrap($this->endpoint . '/v1/payreq/' . $payReq,'', "GET", $header), true );
+          $callResponse = $this->lndCon->getInvoiceInfoFromPayReq( $payReq );
           require __DIR__.'/templates/payment.php';
+
         } elseif ($order->has_status(array('processing', 'completed'))) {
           require __DIR__.'/templates/completed.php';
         }
@@ -218,16 +213,6 @@ if (!function_exists('init_wc_lightning')) {
       public function register_gateway($methods) {
         $methods[] = $this;
         return $methods;
-      }
-
-      protected static function get_qr_uri($invoice) {
-        $renderer = new \BaconQrCode\Renderer\Image\Png;
-        $renderer->setWidth(180);
-        $renderer->setHeight(180);
-        $renderer->setMargin(0);
-        $writer = new \BaconQrCode\Writer($renderer);
-        $image = $writer->writeString(strtoupper('lightning:' . $invoice));
-        return 'data:image/png;base64,' . base64_encode($image);
       }
 
       protected static function format_msat($msat) {
