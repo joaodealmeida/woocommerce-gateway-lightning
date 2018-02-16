@@ -1,0 +1,16 @@
+{
+  "name": "elementsproject/lightning-charge-client-php",
+  "description": "PHP client for the Lightning Charge REST API",
+  "version": "0.1.3",
+  "license": "MIT",
+  "require": {
+    "tcdent/php-restclient": "^0.1"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^6.4",
+    "clue/phar-composer": "^1.0"
+  },
+  "autoload": {
+      "files": ["client.php"]
+  }
+}

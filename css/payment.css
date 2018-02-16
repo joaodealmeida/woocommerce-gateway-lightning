@@ -1,0 +1,49 @@
+/* Hide WooCommerce default title payment details */
+header.entry-header, .order_details {
+  display: none;
+}
+
+.woocommerce-breadcrumb {
+  margin-bottom: 0;
+}
+
+.ln-pay { margin-bottom: 2em; }
+
+.ln-pay h2 { margin-bottom: 0; }
+
+.ln-pay h4 {
+  color: #999;
+  clear: none;
+}
+
+.ln-pay .qr {
+  display: block;
+  float: right;
+  width: 200px;
+  margin-top: -10px;
+}
+
+.ln-pay .payreq {
+  word-wrap: break-word;
+  margin-right: 220px;
+}
+
+.ln-pay code {
+  display: block;
+  margin: 1em 0;
+  padding: 0.75em;
+}
+
+.ln-pay p {
+  margin: 1em 0;
+}
+
+.ln-pay .loader {
+  display: inline;
+}
+
+@media (max-width: 550px) {
+  .ln-pay { text-align: center; }
+  .ln-pay .qr { float: none; margin: 0 auto; }
+  .ln-pay .payreq { margin-right: 0; }
+}
