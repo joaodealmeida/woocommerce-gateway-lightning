@@ -49,7 +49,7 @@ function curlWrap($url, $json, $action, $headers) {
 
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       //This is set to 0 for development mode. Set 1 when production (self-signed certificate error)
-      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
       curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
 
