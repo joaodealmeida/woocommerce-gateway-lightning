@@ -12,6 +12,6 @@
     Lightning rhash: <strong><?php echo $invoiceRep->r_hash ?></strong>
   </li>
   <li>
-    Invoice amount: <strong><?php echo self::format_msat($invoiceRep->value) ?></strong>
+    Invoice amount: <strong><?php echo self::format_msat($invoiceRep->value, $this->lndCon->getCoin()) ?></strong>
   </li>
 </ul>

@@ -20,7 +20,6 @@ register_activation_hook( __FILE__, function(){
   }
 });
 
-require_once 'utilities.php';
 require_once 'Lnd_wrapper.php';
 
 define('LIGHTNING_LONGPOLL_TIMEOUT', min(120, max(5, ini_get('max_execution_time') * 0.8)));
@@ -51,6 +50,7 @@ if (!function_exists('init_wc_lightning')) {
         $this->macaroon = $this->get_option( 'macaroon' );
         $this->lndCon = LndWrapper::instance();
         $this->lndCon->setCredentials ( $this->get_option( 'endpoint' ), $this->get_option( 'macaroon' ));        
+        $this->lndCon->setCoin( $this->get_option( 'coin' ) );
 
         add_action('woocommerce_payment_gateways', array($this, 'register_gateway'));
         add_action('woocommerce_update_options_payment_gateways_lightning', array($this, 'process_admin_options'));
@@ -79,6 +79,17 @@ if (!function_exists('init_wc_lightning')) {
             'default'     => __('Bitcoin Lightning', 'lightning'),
             'desc_tip'    => true,
            ),
+           'coin' => array(
+             'title'       => __('Coin', 'lightning'),
+             'type'        => 'select',
+             'description' => __('Select the coin network your LND is connected to.', 'lightning'),
+             'default'     => __('BTC', 'lightning'),
+             'options'     => array(
+                            'BTC'   => __('BTC','lightning'),
+                            'LTC'  => __('LTC','lightning')
+             ),
+             'desc_tip'    => true, 
+            ),
           'endpoint' => array(
             'title'       => __( 'Endpoint', 'lightning' ),
             'type'        => 'textarea',
@@ -112,7 +123,7 @@ if (!function_exists('init_wc_lightning')) {
       public function process_payment( $order_id ) {
         $order = wc_get_order($order_id);
         $usedCurrency = get_woocommerce_currency();
-        $livePrice = getLivePrice();
+        $livePrice = $this->lndCon->getLivePrice();
 
         $invoiceInfo = array();
         $btcPrice = $order->get_total() * ((float)1/ $livePrice);
@@ -123,7 +134,7 @@ if (!function_exists('init_wc_lightning')) {
         $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
 
         update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request, true);
-        $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " BTC @ 1 BTC ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);
+        $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);
 
         return array(
           'result'   => 'success',
@@ -215,8 +226,8 @@ if (!function_exists('init_wc_lightning')) {
         return $methods;
       }
 
-      protected static function format_msat($msat) {
-        return rtrim(rtrim(number_format($msat/100000000, 8), '0'), '.') . ' BTC';
+      protected static function format_msat($msat, $coin) {
+        return rtrim(rtrim(number_format($msat/100000000, 8), '0'), '.') . ' ' . $coin;
       }
     }
 
