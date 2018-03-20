@@ -132,7 +132,6 @@ if (!function_exists('init_wc_lightning')) {
         $invoiceInfo['memo'] = "Order key: " . $order->get_checkout_order_received_url();
 
         $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
-
         update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request, true);
         $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);
 
@@ -164,6 +163,25 @@ if (!function_exists('init_wc_lightning')) {
 
         $callResponse = $this->lndCon->getInvoiceInfoFromPayReq( $payReq );
         if(!property_exists( $callResponse, 'payment_hash' )) {
+          status_header(410);
+          wp_send_json(false);
+          return;
+        }
+
+        $invoiceTime = $callResponse->timestamp + $callResponse->expiry;
+        if($invoiceTime < time()) {
+
+          //Invoice expired
+          $livePrice = $this->lndCon->getLivePrice();
+          $invoiceInfo = array();
+          $btcPrice = $order->get_total() * ((float)1/ $livePrice);
+          
+          $invoiceInfo['value'] = round($btcPrice * 100000000);
+          $invoiceInfo['memo'] = "Order key: " . $order->get_checkout_order_received_url();
+  
+          $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
+          update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request);
+          $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);          
           status_header(410);
           wp_send_json(false);
           return;
