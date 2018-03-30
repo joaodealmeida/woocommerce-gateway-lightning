@@ -97,13 +97,6 @@ if (!function_exists('init_wc_lightning')) {
             'default'     => 'http://localhost:3000/api',
             'desc_tip'    => true,
           ),
-          'description' => array(
-            'title'       => __('Customer Message', 'lightning'),
-            'type'        => 'textarea',
-            'description' => __('Message to explain how the customer will be paying for the purchase.', 'lightning'),
-            'default'     => 'You will pay using the Lightning Network.',
-            'desc_tip'    => true,
-          ),
           'macaroon' => array(
             'title'       => __('Macaroon Hex', 'lightning'),
             'type'        => 'textarea',
@@ -111,6 +104,13 @@ if (!function_exists('init_wc_lightning')) {
             'default'     => '',
             'desc_tip'    => true,
           ),
+          'description' => array(
+            'title'       => __('Customer Message', 'lightning'),
+            'type'        => 'textarea',
+            'description' => __('Message to explain how the customer will be paying for the purchase.', 'lightning'),
+            'default'     => 'You will pay using the Lightning Network.',
+            'desc_tip'    => true,
+          )
           
         );
       }
@@ -132,6 +132,17 @@ if (!function_exists('init_wc_lightning')) {
         $invoiceInfo['memo'] = "Order key: " . $order->get_checkout_order_received_url();
 
         $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
+
+        if(property_exists($invoiceResponse, 'error')){
+          wc_add_notice( __('Error: ', 'lightning') . 'Lightning Node authorization error. Please contact the store administrator.', 'error' );
+          return;
+        }
+
+        if(!property_exists($invoiceResponse, 'payment_request')) {
+          wc_add_notice( __('Error: ', 'lightning') . 'Lightning Node is not reachable at this time. Please contact the store administrator.', 'error' );
+          return;
+        }
+
         update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request, true);
         $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);
 
