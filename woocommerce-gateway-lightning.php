@@ -1,7 +1,7 @@
 <?php
 /*
     Plugin Name: WooCommerce Lightning Gateway
-    Plugin URI:  https://zap-wallet.me
+    Plugin URI:  https://joaoalmeida.me
     Description: Enable instant and fee-reduced payments in BTC and LTC through Lightning Network.
     Author:      João Almeida
     Author URI:  https://joaoalmeida.me
@@ -21,8 +21,6 @@ register_activation_hook( __FILE__, function(){
 });
 
 require_once 'Lnd_wrapper.php';
-
-define('LIGHTNING_LONGPOLL_TIMEOUT', min(120, max(5, ini_get('max_execution_time') * 0.8)));
 
 if (!function_exists('init_wc_lightning')) {
 
