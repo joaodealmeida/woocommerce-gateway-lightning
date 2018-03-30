@@ -47,7 +47,7 @@ if (!function_exists('init_wc_lightning')) {
         $this->endpoint = $this->get_option( 'endpoint' );
         $this->macaroon = $this->get_option( 'macaroon' );
         $this->lndCon = LndWrapper::instance();
-        $this->lndCon->setCredentials ( $this->get_option( 'endpoint' ), $this->get_option( 'macaroon' ));        
+        $this->lndCon->setCredentials ( $this->get_option( 'endpoint' ), $this->get_option( 'macaroon' ), $this->get_option( 'ssl' ));        
         $this->lndCon->setCoin( $this->get_option( 'coin' ) );
 
         add_action('woocommerce_payment_gateways', array($this, 'register_gateway'));
@@ -62,6 +62,7 @@ if (!function_exists('init_wc_lightning')) {
        * Initialise Gateway Settings Form Fields.
        */
       public function init_form_fields() {
+        $tlsPath = plugin_dir_path(__FILE__).'tls/tls.cert';
         $this->form_fields = array(
           'enabled' => array(
             'title'       => __( 'Enable/Disable', 'woocommerce-gateway-lightning' ),
@@ -92,7 +93,7 @@ if (!function_exists('init_wc_lightning')) {
             'title'       => __( 'Endpoint', 'lightning' ),
             'type'        => 'textarea',
             'description' => __( 'Place here the API endpoint', 'lightning' ),
-            'default'     => 'http://localhost:3000/api',
+            'default'     => 'https://localhost:8080',
             'desc_tip'    => true,
           ),
           'macaroon' => array(
@@ -107,6 +108,13 @@ if (!function_exists('init_wc_lightning')) {
             'type'        => 'textarea',
             'description' => __('Message to explain how the customer will be paying for the purchase.', 'lightning'),
             'default'     => 'You will pay using the Lightning Network.',
+            'desc_tip'    => true,
+          ),
+          'ssl' => array(
+            'title'       => __('SSL Certificate Path', 'lightning'),
+            'type'        => 'textarea',
+            'description' => __('Put your LND SSL certificate path.', 'lightning'),
+            'default'     => $tlsPath,
             'desc_tip'    => true,
           )
           
@@ -132,7 +140,7 @@ if (!function_exists('init_wc_lightning')) {
         $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
 
         if(property_exists($invoiceResponse, 'error')){
-          wc_add_notice( __('Error: ', 'lightning') . 'Lightning Node authorization error. Please contact the store administrator.', 'error' );
+          wc_add_notice( __('Error: ', 'lightning') . $invoiceResponse->error, 'error' );
           return;
         }
 

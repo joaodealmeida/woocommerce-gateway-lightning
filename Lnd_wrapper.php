@@ -6,6 +6,7 @@ class LndWrapper
     private $macaroonHex;
     private $endpoint;
     private $coin = 'BTC';
+    private $tlsPath;
 
 
     /**
@@ -74,6 +75,7 @@ class LndWrapper
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             //This is set to 0 for development mode. Set 1 when production (self-signed certificate error)
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
+            curl_setopt($ch, CURLOPT_CAINFO, $this->tlsPath);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         
         
@@ -86,9 +88,10 @@ class LndWrapper
     /**
      * Set endpoint credentials
      */
-    public function setCredentials ( $endpoint , $macaroonHex ){
+    public function setCredentials ( $endpoint , $macaroonHex , $tlsPath){
         $this->endpoint = $endpoint;
         $this->macaroonHex = $macaroonHex;
+        $this->tlsPath = $tlsPath;
     }
 
     public function setCoin ( $coin ){
