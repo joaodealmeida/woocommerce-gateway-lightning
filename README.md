@@ -15,6 +15,9 @@ Requires PHP >= 5.6 and the `php-curl` and `php-gd` extensions.
 
 4. Under the WordPress administration panel, go to `WooCommerce -> Settings -> Checkout -> Lightning` and set LND endpoint and macaroon key.
 
+5. Add LND tls.cert to plugin-folder/tls or input the exact path on plugin settings.
+
+
 The payment option should now be available in your checkout page.
 
 ## License
