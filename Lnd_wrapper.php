@@ -50,9 +50,9 @@ class LndWrapper
      */
     private function curlWrap( $url, $json, $action, $headers ) {
         $ch			=			curl_init();
-        
+
         curl_setopt($ch, CURLOPT_URL, $url);
-        
+
         switch($action){
             case "POST":
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
@@ -71,16 +71,16 @@ class LndWrapper
             default:
                 break;
             }
-        
+
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             //This is set to 0 for development mode. Set 1 when production (self-signed certificate error)
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
             curl_setopt($ch, CURLOPT_CAINFO, $this->tlsPath);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        
-        
+
+
             $output = curl_exec($ch);
-        
+
             curl_close($ch);
             return $output;
     }
@@ -117,7 +117,7 @@ class LndWrapper
         $createInvoiceResponse = json_decode($createInvoiceResponse);
         return $createInvoiceResponse;
     }
-    
+
     public function getInvoiceInfoFromPayReq ($paymentRequest) {
         $header = array('Grpc-Metadata-macaroon: ' . $this->macaroonHex , 'Content-type: application/json');
         $invoiceInfoResponse = $this->curlWrap( $this->endpoint . '/v1/payreq/' . $paymentRequest,'', "GET", $header );
@@ -129,11 +129,11 @@ class LndWrapper
         $header = array('Grpc-Metadata-macaroon: ' . $this->macaroonHex , 'Content-type: application/json');
         $invoiceInfoResponse = $this->curlWrap( $this->endpoint . '/v1/invoice/' . $paymentHash,'', "GET", $header );
         $invoiceInfoResponse = json_decode( $invoiceInfoResponse );
-        return $invoiceInfoResponse;      
+        return $invoiceInfoResponse;
     }
 
     public function getLivePrice() {
-        
+
         $ticker = "BTCUSD";
         if($this->coin === 'LTC'){
             $ticker = 'LTCUSD';
@@ -145,8 +145,8 @@ class LndWrapper
             'method'  => 'GET',
               )
         );
-        $content = file_get_contents($tickerUrl, false, $context);
-        
+        $content = file_get_contents($tickerUrl, false);
+
         return json_decode($content, true)['ask'];
     }
 
