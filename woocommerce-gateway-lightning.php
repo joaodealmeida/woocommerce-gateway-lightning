@@ -35,7 +35,7 @@ if (!function_exists('init_wc_lightning')) {
         $this->method_title       = __('Lightning', 'woocommerce');
         $this->method_description = __('Lightning Network Payment');
         $this->icon               = plugin_dir_url(__FILE__).'img/logo.png';
-        $this->supports           = array();       
+        $this->supports           = array();
 
         // Load the settings.
         $this->init_form_fields();
@@ -47,7 +47,7 @@ if (!function_exists('init_wc_lightning')) {
         $this->endpoint = $this->get_option( 'endpoint' );
         $this->macaroon = $this->get_option( 'macaroon' );
         $this->lndCon = LndWrapper::instance();
-        $this->lndCon->setCredentials ( $this->get_option( 'endpoint' ), $this->get_option( 'macaroon' ), $this->get_option( 'ssl' ));        
+        $this->lndCon->setCredentials ( $this->get_option( 'endpoint' ), $this->get_option( 'macaroon' ), $this->get_option( 'ssl' ));
         $this->lndCon->setCoin( $this->get_option( 'coin' ) );
 
         add_action('woocommerce_payment_gateways', array($this, 'register_gateway'));
@@ -87,7 +87,7 @@ if (!function_exists('init_wc_lightning')) {
                             'BTC'   => __('BTC','lightning'),
                             'LTC'  => __('LTC','lightning')
              ),
-             'desc_tip'    => true, 
+             'desc_tip'    => true,
             ),
           'endpoint' => array(
             'title'       => __( 'Endpoint', 'lightning' ),
@@ -117,7 +117,7 @@ if (!function_exists('init_wc_lightning')) {
             'default'     => $tlsPath,
             'desc_tip'    => true,
           )
-          
+
         );
       }
 
@@ -129,11 +129,11 @@ if (!function_exists('init_wc_lightning')) {
       public function process_payment( $order_id ) {
         $order = wc_get_order($order_id);
         $usedCurrency = get_woocommerce_currency();
-        $livePrice = $this->lndCon->getLivePrice();
+        $livePrice = $this->lndCon->getLivePrice($usedCurrency);
 
         $invoiceInfo = array();
         $btcPrice = $order->get_total() * ((float)1/ $livePrice);
-        
+
         $invoiceInfo['value'] = round($btcPrice * 100000000);
         $invoiceInfo['memo'] = "Order key: " . $order->get_checkout_order_received_url();
 
@@ -164,15 +164,15 @@ if (!function_exists('init_wc_lightning')) {
        */
       public function wait_invoice() {
 
-        $order = wc_get_order($_POST['invoice_id']);         
-        
+        $order = wc_get_order($_POST['invoice_id']);
+
         if($order->get_status() == 'processing'){
           status_header(200);
           wp_send_json(true);
           return;
         }
         /**
-         * 
+         *
          * Check if invoice is paid
          */
 
@@ -192,25 +192,25 @@ if (!function_exists('init_wc_lightning')) {
           $livePrice = $this->lndCon->getLivePrice();
           $invoiceInfo = array();
           $btcPrice = $order->get_total() * ((float)1/ $livePrice);
-          
+
           $invoiceInfo['value'] = round($btcPrice * 100000000);
           $invoiceInfo['memo'] = "Order key: " . $order->get_checkout_order_received_url();
-  
+
           $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
           update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request);
-          $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);          
+          $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);
           status_header(410);
           wp_send_json(false);
           return;
         }
-        
-        $invoiceRep = $this->lndCon->getInvoiceInfoFromHash( $callResponse->payment_hash );        
+
+        $invoiceRep = $this->lndCon->getInvoiceInfoFromHash( $callResponse->payment_hash );
         if(!property_exists( $invoiceRep, 'settled' )){
           status_header(402);
           wp_send_json(false);
           return;
         }
-        
+
         if ($invoiceRep->settled) {
           $order->payment_complete();
           $order->add_order_note('Lightning Payment received on ' . $invoiceRep->settle_date);
