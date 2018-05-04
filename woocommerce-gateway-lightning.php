@@ -150,6 +150,7 @@ if (!function_exists('init_wc_lightning')) {
         }
 
         update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request, true);
+        update_post_meta( $order->get_id(), 'LN_HASH', $invoiceResponse->r_hash, true);
         $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);
 
         return array(
@@ -176,16 +177,16 @@ if (!function_exists('init_wc_lightning')) {
          * Check if invoice is paid
          */
 
-        $payReq = get_post_meta( $_POST['invoice_id'], 'LN_INVOICE', true );
+        $payHash = get_post_meta( $_POST['invoice_id'], 'LN_HASH', true );
 
-        $callResponse = $this->lndCon->getInvoiceInfoFromPayReq( $payReq );
-        if(!property_exists( $callResponse, 'payment_hash' )) {
+        $callResponse = $this->lndCon->getInvoiceInfoFromHash( bin2hex(base64_decode( $payHash ) ) );
+        if(!property_exists( $callResponse, 'r_hash' )) {
           status_header(410);
           wp_send_json(false);
           return;
         }
 
-        $invoiceTime = $callResponse->timestamp + $callResponse->expiry;
+        $invoiceTime = $callResponse->creation_date + $callResponse->expiry;
         if($invoiceTime < time()) {
 
           //Invoice expired
@@ -198,20 +199,20 @@ if (!function_exists('init_wc_lightning')) {
   
           $invoiceResponse = $this->lndCon->createInvoice ( $invoiceInfo );
           update_post_meta( $order->get_id(), 'LN_INVOICE', $invoiceResponse->payment_request);
+          update_post_meta( $order->get_id(), 'LN_HASH', $invoiceResponse->r_hash);
           $order->add_order_note("Awaiting payment of " . number_format((float)$btcPrice, 7, '.', '') . " " . $this->lndCon->getCoin() .  "@ 1 " . $this->lndCon->getCoin() . " ~ " . $livePrice ." USD. <br> Invoice ID: " . $invoiceResponse->payment_request);          
           status_header(410);
           wp_send_json(false);
           return;
         }
         
-        $invoiceRep = $this->lndCon->getInvoiceInfoFromHash( $callResponse->payment_hash );        
-        if(!property_exists( $invoiceRep, 'settled' )){
+        if(!property_exists( $callResponse, 'settled' )){
           status_header(402);
           wp_send_json(false);
           return;
         }
         
-        if ($invoiceRep->settled) {
+        if ($callResponse->settled) {
           $order->payment_complete();
           $order->add_order_note('Lightning Payment received on ' . $invoiceRep->settle_date);
           status_header(200);
@@ -244,8 +245,8 @@ if (!function_exists('init_wc_lightning')) {
         if ($order->needs_payment()) {
           //Prepare information for payment page
           $qr_uri = $this->lndCon->generateQr( get_post_meta( $order_id, 'LN_INVOICE', true ) );
-          $payReq = get_post_meta( $order->get_id(), 'LN_INVOICE', true );
-          $callResponse = $this->lndCon->getInvoiceInfoFromPayReq( $payReq );
+          $payHash = get_post_meta( $order_id, 'LN_HASH', true );
+          $callResponse = $this->lndCon->getInvoiceInfoFromHash( bin2hex(base64_decode($payHash)) );
           require __DIR__.'/templates/payment.php';
 
         } elseif ($order->has_status(array('processing', 'completed'))) {
