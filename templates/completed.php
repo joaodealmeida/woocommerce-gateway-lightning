@@ -1,7 +1,7 @@
 <h2>Payment completed successfully</h2>
 <?php
   $payHash = get_post_meta( $order->get_id(), 'LN_HASH', true );
-  $invoiceRep = $this->lndCon->getInvoiceInfoFromHash( $payHash ); 
+  $invoiceRep = $this->lndCon->getInvoiceInfoFromHash( bin2hex(base64_decode($payHash)) ); 
 ?>
 <ul class="order_details">
   <li>
