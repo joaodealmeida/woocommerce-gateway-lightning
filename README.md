@@ -7,7 +7,8 @@ using [LND](https://github.com/lightningnetwork/lnd).
 
 Requires PHP >= 5.6 and the `php-curl` and `php-gd` extensions.
 
-1. Setup a [LND] node (https://github.com/lightningnetwork/lnd), Raspberry Pi set-up (https://stadicus.github.io/RaspiBolt/)
+1. Setup a [LND] node (https://github.com/lightningnetwork/lnd), 
+   Raspberry Pi set-up (https://stadicus.github.io/RaspiBolt/)
 
 2. Get the Node server IP and macaroon key
 
