@@ -219,8 +219,9 @@ if (!function_exists('init_wc_lightning')) {
         }
         
         if ($callResponse->settled) {
+          $settle_date = $callResponse->settle_date;
+          $order->add_order_note( 'Lightning Payment received on '. date( 'Y-m-d H:i:s', $settle_date ) .' UTC ('. $settle_date .')' );
           $order->payment_complete();
-          $order->add_order_note('Lightning Payment received on ' . $invoiceRep->settle_date);
           status_header(200);
           wp_send_json(true);
           return;
