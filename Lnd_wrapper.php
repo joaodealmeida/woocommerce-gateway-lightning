@@ -88,10 +88,11 @@ class LndWrapper
     /**
      * Set endpoint credentials
      */
-    public function setCredentials ( $endpoint , $macaroonHex , $tlsPath){
+    public function setCredentials ( $endpoint, $macaroonHex, $tlsPath, $btcavgAPI ){
         $this->endpoint = $endpoint;
         $this->macaroonHex = $macaroonHex;
         $this->tlsPath = $tlsPath;
+        $this->btcavgAPI = $btcavgAPI;
     }
 
     public function setCoin ( $coin ){
@@ -140,13 +141,17 @@ class LndWrapper
         }
         $tickerUrl = "https://apiv2.bitcoinaverage.com/indices/global/ticker/" . $ticker;
         $aHTTP = array(
-          'http' =>
-            array(
-            'method'  => 'GET',
-              )
+          'http' => array(
+            'method'  => 'GET'
+          )
         );
-        $content = file_get_contents($tickerUrl, false);
 
+        // Authenticates with bitcoinaverage.com API key, if available
+        if($btcavg_api_key = $this->btcavgAPI) {
+            $aHTTP['http']['header'] = 'x-ba-key: ' . $btcavg_api_key;
+        }
+        $context = stream_context_create($aHTTP);
+        $content = file_get_contents($tickerUrl, false, $context);
         return json_decode($content, true)['ask'];
     }
 

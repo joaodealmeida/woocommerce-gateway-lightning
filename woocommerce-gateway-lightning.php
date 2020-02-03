@@ -116,8 +116,14 @@ if (!function_exists('init_wc_lightning')) {
             'description' => __('Put your LND SSL certificate path.', 'lightning'),
             'default'     => $tlsPath,
             'desc_tip'    => true,
+          ),
+          'btcavg_api' => array(
+            'title'       => __('BitcoinAverage.com API key', 'lightning'),
+            'type'        => 'textarea',
+            'description' => __('Enter your BitcoinAverage.com public API key for authentication.', 'lightning'),
+            'default'     => '',
+            'desc_tip'    => true,
           )
-          
         );
       }
 
@@ -213,8 +219,9 @@ if (!function_exists('init_wc_lightning')) {
         }
         
         if ($callResponse->settled) {
+          $settle_date = $callResponse->settle_date;
+          $order->add_order_note( 'Lightning Payment received on '. date( 'Y-m-d H:i:s', $settle_date ) .' UTC ('. $settle_date .')' );
           $order->payment_complete();
-          $order->add_order_note('Lightning Payment received on ' . $invoiceRep->settle_date);
           status_header(200);
           wp_send_json(true);
           return;
