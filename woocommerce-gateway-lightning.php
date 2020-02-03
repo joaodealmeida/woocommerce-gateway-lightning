@@ -116,8 +116,14 @@ if (!function_exists('init_wc_lightning')) {
             'description' => __('Put your LND SSL certificate path.', 'lightning'),
             'default'     => $tlsPath,
             'desc_tip'    => true,
+          ),
+          'btcavg_api' => array(
+            'title'       => __('BitcoinAverage.com API key', 'lightning'),
+            'type'        => 'textarea',
+            'description' => __('Enter your BitcoinAverage.com public API key for authentication.', 'lightning'),
+            'default'     => '',
+            'desc_tip'    => true,
           )
-          
         );
       }
 
