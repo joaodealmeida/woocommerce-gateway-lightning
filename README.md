@@ -17,6 +17,8 @@ Requires PHP >= 5.6 and the `php-curl` and `php-gd` extensions.
 
 5. Add LND tls.cert to plugin-folder/tls or input the exact path on plugin settings.
 
+6. Add BitcoinAverage.com API public key to authenticate live price reliably (https://pro.bitcoinaverage.com/pages/auth/api-keys)
+
 
 The payment option should now be available in your checkout page.
 
